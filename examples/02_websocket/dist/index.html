@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Chat</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        #messages {
+            height: 400px;
+            border: 1px solid #ccc;
+            overflow-y: auto;
+            margin-bottom: 20px;
+            padding: 10px;
+        }
+        .message {
+            margin-bottom: 10px;
+            padding: 5px;
+        }
+        .system {
+            color: #666;
+            font-style: italic;
+        }
+        .user {
+            color: #000;
+        }
+        .message .username {
+            font-weight: bold;
+            color: #2c5282;
+        }
+        #messageForm {
+            display: flex;
+            gap: 10px;
+        }
+        #messageInput {
+            flex-grow: 1;
+            padding: 5px;
+        }
+        button {
+            padding: 5px 15px;
+            background-color: #4299e1;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #2b6cb0;
+        }
+        .status {
+            margin-bottom: 10px;
+            padding: 10px;
+            background-color: #f0f0f0;
+        }
+        .error {
+            background-color: #fee2e2;
+            color: #dc2626;
+        }
+    </style>
+</head>
+<body>
+    <div id="status" class="status">Connecting...</div>
+    <div id="messages"></div>
+    <form id="messageForm">
+        <input type="text" id="messageInput" placeholder="Type your message..." autocomplete="off">
+        <button type="submit">Send</button>
+    </form>
+
+    <script>
+        const messagesDiv = document.getElementById('messages');
+        const messageForm = document.getElementById('messageForm');
+        const messageInput = document.getElementById('messageInput');
+        const statusDiv = document.getElementById('status');
+
+        let ws;
+
+        function connect() {
+            ws = new WebSocket('ws://localhost:8080/chat');
+
+            ws.onopen = () => {
+                statusDiv.textContent = 'Connected';
+                statusDiv.classList.remove('error');
+            };
+
+            ws.onclose = () => {
+                statusDiv.textContent = 'Disconnected - Reconnecting...';
+                statusDiv.classList.add('error');
+                setTimeout(connect, 1000);
+            };
+
+            ws.onerror = (error) => {
+                console.error('WebSocket error:', error);
+                statusDiv.textContent = 'Error connecting';
+                statusDiv.classList.add('error');
+            };
+
+            ws.onmessage = (event) => {
+                const message = JSON.parse(event.data);
+                displayMessage(message);
+            };
+        }
+
+        function displayMessage(message) {
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message');
+            
+            if (message.type === 'system') {
+                messageDiv.classList.add('system');
+                messageDiv.textContent = message.content;
+            } else {
+                messageDiv.classList.add('user');
+                const username = document.createElement('span');
+                username.classList.add('username');
+                username.textContent = message.user + ': ';
+                messageDiv.appendChild(username);
+                messageDiv.appendChild(document.createTextNode(message.content));
+            }
+
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        messageForm.onsubmit = (e) => {
+            e.preventDefault();
+            const content = messageInput.value.trim();
+            if (content && ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: 'message',
+                    content: content
+                }));
+                messageInput.value = '';
+            }
+        };
+
+        // Initial connection
+        connect();
+    </script>
+</body>
+</html>

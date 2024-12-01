@@ -1,0 +1,149 @@
+<!-- static/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Example</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 40px auto;
+            padding: 20px;
+        }
+        .container {
+            border: 1px solid #ddd;
+            padding: 20px;
+            border-radius: 5px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .error {
+            color: red;
+            margin-top: 10px;
+        }
+        .success {
+            color: green;
+            margin-top: 10px;
+        }
+        #secureContent {
+            display: none;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="loginForm">
+            <h2>Login</h2>
+            <div class="form-group">
+                <label for="username">Username:</label>
+                <input type="text" id="username" required>
+            </div>
+            <div class="form-group">
+                <label for="password">Password:</label>
+                <input type="password" id="password" required>
+            </div>
+            <button onclick="login()">Login</button>
+            <div id="loginError" class="error"></div>
+        </div>
+
+        <div id="secureContent">
+            <h2>Secure Content</h2>
+            <p>Welcome, <span id="userDisplay"></span>!</p>
+            <button onclick="logout()">Logout</button>
+        </div>
+    </div>
+
+    <script>
+        // Check if user is already logged in
+        const token = localStorage.getItem('authToken');
+        if (token) {
+            fetchSecureContent();
+        }
+
+        async function login() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            try {
+                const response = await fetch('/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ username, password }),
+                });
+
+                const data = await response.json();
+
+                if (data.ok) {
+                    localStorage.setItem('authToken', data.results.token);
+                    fetchSecureContent();
+                } else {
+                    document.getElementById('loginError').textContent = data.error.message;
+                }
+            } catch (error) {
+                document.getElementById('loginError').textContent = 'An error occurred during login';
+            }
+        }
+
+        async function fetchSecureContent() {
+            const token = localStorage.getItem('authToken');
+            if (!token) return;
+
+            try {
+                const response = await fetch('/api/me', {
+                    headers: {
+                        'Authorization': token,
+                    },
+                });
+
+                const data = await response.json();
+
+                console.log(data);
+                if (data.ok) {
+                    document.getElementById('loginForm').style.display = 'none';
+                    document.getElementById('secureContent').style.display = 'block';
+                    document.getElementById('userDisplay').textContent = data.results.username;
+                } else {
+                    logout();
+                }
+            } catch (error) {
+                logout();
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('authToken');
+            document.getElementById('loginForm').style.display = 'block';
+            document.getElementById('secureContent').style.display = 'none';
+            document.getElementById('username').value = '';
+            document.getElementById('password').value = '';
+        }
+    </script>
+</body>
+</html>
