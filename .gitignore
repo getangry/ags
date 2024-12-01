@@ -1,2 +1,3 @@
 # Examples
 examples/04_login/auth.db
+*.db
